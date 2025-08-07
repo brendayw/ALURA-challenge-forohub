@@ -32,13 +32,15 @@ public class TopicoController {
     }
 
     @GetMapping
-    public Page<DatosListadoTopicos> listar(@PageableDefault(size=10, sort={"fechaCreacion"})Pageable paginacion) {
-        return repository.findAll(paginacion).map(DatosListadoTopicos::new);
+    public  ResponseEntity<Page<DatosListadoTopicos>> listar(@PageableDefault(size=10, sort={"fechaCreacion"})Pageable paginacion) {
+        Page<DatosListadoTopicos> pagina = repository.findAllByActivoTrue(paginacion)
+                .map(DatosListadoTopicos::new);
+        return ResponseEntity.ok(pagina);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<DatosListadoTopicos> obtenerPorId(@PathVariable Long id) {
-        var topico = repository.findById(id)
+        var topico = repository.findByIdAndActivoTrue(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Topico no encontrado."));
         DatosListadoTopicos datos = new DatosListadoTopicos(topico);
         return ResponseEntity.ok(datos);
@@ -47,7 +49,7 @@ public class TopicoController {
     @Transactional
     @PutMapping
     public ResponseEntity<String> actualizar(@RequestBody @Valid DatosActualizarTopico datos) throws TopicoNotFoundException {
-        Optional<Topico> topicoOpcional = repository.findById(datos.id());
+        Optional<Topico> topicoOpcional = repository.findByIdAndActivoTrue(datos.id());
         if (topicoOpcional.isPresent()) {
             Topico topico = topicoOpcional.get();
             topico.actualizarInformacion(datos);
@@ -55,5 +57,17 @@ public class TopicoController {
             throw new TopicoNotFoundException("Topico no encontrado");
         }
         return ResponseEntity.ok("Topico actualizado correctamente.");
+    }
+
+    @Transactional
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> eliminar(@PathVariable Long id) throws TopicoNotFoundException {
+        Optional<Topico> topicoOpcional = repository.findById(id);
+        if (topicoOpcional.isPresent()) {
+            topicoOpcional.get().eliminar();
+        } else {
+            throw new TopicoNotFoundException("Topico no encontrado");
+        }
+        return ResponseEntity.ok("Topico eliminado exitosamente.");
     }
 }
